@@ -1,17 +1,17 @@
 # Overview
-ZetaGo is a python implementation of Deepmind's AlphaGoZero.
+ZetaGo is a python implementation of Deepmind's AlphaGo Zero.
 I choose the greek letter "zeta" as the name because of its similarity to the
 word "zero".
-ZetaGo is almost an exact reproduction of AlphaGoZero, with some minor
-differences (see Section "Differences from AlphaGoZero" for a complete list).
+ZetaGo is almost an exact reproduction of AlphaGo Zero, with some minor
+differences (see Section "Differences from AlphaGo Zero" for a complete list).
 Through runnable, the nature of this project is more demonstrative than
 practical.
 A rough estimation by myself shows that it would take over 30,000 years to
 finish the training on my own desktop
 (CPU: Intel Core i5-6600K / GPU: NVidia GTX 1080 / RAM: DDR4 16GB).
 
-Given the infeasibility of training a standard AlphaGoZero model in my computer,
-I turn to solving a smaller problem.
+Given the infeasibility of training a standard AlphaGo Zero model in my
+computer, I turn to solving a smaller problem.
 In particular, I attempt to train a good model for 9x9 Go board.
 Currently it still takes about one year to finish the training even for this
 smaller setup.
@@ -30,10 +30,10 @@ The differences mainly come from the following five aspects:
 Territory scoring introduces way too many unnecessary concepts and definitions
 which make it rather complicated and less intuitive.
 Compared to territory scoring, area scoring is much more concise and beautiful.
-AlphaGoZero adopts area scoring as well.
+AlphaGo Zero adopts area scoring as well.
 
 * Ko: ZetaGo only considers simple ko.
-In contrast, AlphaGoZero considers super ko.
+In contrast, AlphaGo Zero considers super ko.
 Unlike my strong preference to area scoring than territory scoring, I basically
 have a neutral attitude to simple ko and super ko.
 I made this decision for several reasons:
@@ -62,7 +62,7 @@ However I still choose to forbid it because in practice suicidal moves are
 mostly stupid and allowing suicide will make your algorithm spend time on
 exploring these useless moves.
 If you really want to allow suicidal moves, you can enable it by just editing a
-few lines of code. AlphaGoZero does not explicitly specify their choice.
+few lines of code. AlphaGo Zero does not explicitly specify their choice.
 
 * Handicap: We always assume no handicap stones when training the model,
 therefore the rule of placing handicap stones does not matter.
@@ -71,22 +71,30 @@ just on a set of predefined locations.
 
 * Komi: We choose komi=7.5.
 
-# Differences from AlphaGoZero
+# Differences from AlphaGo Zero
 * Since ZetaGo only considers simple ko, a history of length 3 is sufficient to
 fully determine the state and hence the input of ZetaGo only has 7 (=2\*3+1)
 feature planes.
-As a comparison, AlphaGoZero considers a history of length 8 and it has 17
+As a comparison, AlphaGo Zero considers a history of length 8 and it has 17
 (=2\*8+1) feature planes.
 
 * ZetaGo is single-threaded.
 As a result, virtual loss trick is no longer needed and I did not implement it.
-In AlphaGoZero, the three components (the optimization of the neural network,
+In AlphaGo Zero, the three components (the optimization of the neural network,
 the evaluation of the neural network, and the generation of self-play data) are
 asynchronously executed in parallel.
 In ZetaGo, because it is single-threaded, the three components run sequentially.
 
-* The resignation system has not been implemented yet.
-ZetaGo will play each game until termination.
+* The description of AlphaGo Zero's resignation module lacks details.
+In the paper, the authors wrote:
+"AlphaGo Zero resigns if its root value and best child value are lower than a
+threshold value v_resign."
+However they never defined what "root value" and "best child value" are.
+The description of resignation in AlphaGo is much more clear, in which they
+explicitly used quantity max_a{Q(s, a)} (the best action value of the root s) to
+determine resignation.
+In ZetaGo, I follow AlphaGo and also use max_a{Q(s, a)} <= v_resign as the
+criterion of resignation.
 
 # Usage
 ZetaGo provides three basic functions:
@@ -106,12 +114,12 @@ for each command.
 **Train a new model**
 
 Run ```python main.py train``` to start training a new model.
-By default, ZetaGo will train a standard AlphaGoZero model.
+By default, ZetaGo will train a standard AlphaGo Zero model.
 You can train a different model with different parameters by specifying a
 different configuration using the `--config` flag.
 All the configurations are defined in `config.py`.
 I have provided two configurations: `19x19`, which is the standard setup of
-AlphaGoZero, and `9x9`, which corresponds to a smaller setup of 9x9 Go board.
+AlphaGo Zero, and `9x9`, which corresponds to a smaller setup of 9x9 Go board.
 You may also specify a name for your model using the `--model_name` flag.
 If not specified, ZetaGo will use timestamp as name.
 All the checkpoints and the final model will be saved to the directory
@@ -207,13 +215,10 @@ the `src` directory. Following is an introduction to each file:
 # TODO
 The next step is to optimize the performance so that a model for 9x9 Go board
 can be trained in a reasonable time.
-Two major updates are planned.
-The first one is to implement the resignation system.
-The second one is to parallelize the generation of self-play data.
-In fact, I have observed that self-playing is the performance bottleneck as
-ZetaGo spends most of the time on it.
+I have observed that self-playing is the performance bottleneck as ZetaGo spends
+most of the time on it.
 Fortunately this part is also relatively easy to parallelize because different
 runs of self-playing are independent.
 In addition, paralleling the self-playing also allows us to submit a batch of
 neural network evaluation requests to GPU at once, which improves the I/O
-throughput. 
+throughput.

@@ -428,7 +428,7 @@ class Go:
     # NOTICE: The functions below are about ladder capture and they
     # are quite compute-intensive. Ladder capture information are
     # important features in AlphaGo but they are no longer used in
-    # AlphaGoZero. I list them here for completeness.
+    # AlphaGo Zero. I list them here for completeness.
 
     # determine if placing a stone on (x, y) can ladder capture the
     # stone chain (target_x, target_y) belongs to

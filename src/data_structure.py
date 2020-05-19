@@ -4,7 +4,6 @@
 # a bitmap implementation of set
 # high memory efficiency
 class BitSet:
-
     # _masks[i] = 2 ** i
     _masks = (1, 2, 4, 8, 16, 32, 64, 128)
 
@@ -123,7 +122,10 @@ class SmallSet:
         return self._size
 
     def __getitem__(self, i):
-        return None if i < 0 or i >= self._size else self._element[i]
+        if i < 0 or i >= self._size:
+            return None
+        else:
+            return self._element[i]
 
     def __iter__(self):
         self._current = 0
@@ -163,23 +165,49 @@ class SmallSet:
 class Queue:
 
     def __init__(self, capacity):
-        self._element = [None] * capacity
+        self._capacity = capacity
         self._head = 0
         self._tail = 0
         self._size = 0
+        self._current = 0
+        self._element = [None] * capacity
+
+    def __len__(self):
+        return self._size
+
+    def __getitem__(self, i):
+        if i < 0 or i >= self._size:
+            return None
+        else:
+            return self._element[(self._head + i) % self._capacity]
+
+    def __iter__(self):
+        self._current = 0
+        return self
+
+    def __next__(self):
+        return self.next()
+
+    def next(self):
+        if self._current >= self._size:
+            raise StopIteration
+        else:
+            x = self._element[(self._head + self._current) % self._capacity]
+            self._current += 1
+            return x
 
     def is_empty(self):
         return self._size == 0
 
     def is_full(self):
-        return self._size == len(self._element)
+        return self._size == self._capacity
 
     def enqueue(self, x):
         if self.is_full():
             return False
         else:
             self._element[self._tail] = x
-            self._tail = (self._tail + 1) % len(self._element)
+            self._tail = (self._tail + 1) % self._capacity
             self._size += 1
             return True
 
@@ -188,6 +216,6 @@ class Queue:
             return None
         else:
             x = self._element[self._head]
-            self._head = (self._head + 1) % len(self._element)
+            self._head = (self._head + 1) % self._capacity
             self._size -= 1
             return x

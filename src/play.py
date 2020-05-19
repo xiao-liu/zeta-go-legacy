@@ -4,14 +4,23 @@ import numpy as np
 import torch
 
 from feature import extract_features
-from go import BLACK
+from go import BLACK, WHITE
 from gui import GUI
 from mcts import TreeNode, tree_search
 from network import ZetaGoNetwork
 
 
-def self_play(network, device, conf):
+def self_play(network, device, conf, resign_mgr):
     examples = []
+
+    resign_enabled = resign_mgr.enabled()
+    if resign_enabled:
+        resign_threshold = resign_mgr.threshold()
+    else:
+        history = []
+
+    # result undecided
+    result = 0.0
 
     # create a search tree
     root = TreeNode(None, None, network, device, conf)
@@ -23,24 +32,35 @@ def self_play(network, device, conf):
         for i in range(conf.NUM_SIMULATIONS):
             tree_search(root, network, device, conf)
 
+        # we follow AlphaGo's method to calculate the resignation value
+        # notice that children with n = 0 are skipped by setting their
+        # value to be -1.0 (w / n > -1.0 for children with n > 0)
+        resign_value = max(
+            map(lambda w, n: -1.0 if n == 0 else w / n, root.w, root.n))
+        if not resign_enabled:
+            history.append([resign_value, root.go.turn])
+        elif -1.0 < resign_value <= resign_threshold:
+            result = 1.0 if root.go.turn == WHITE else -1.0
+            break
+
         # calculate the distribution of action selection
         # notice that illegal actions always have zero probability as
         # long as NUM_SIMULATION > 0
         if t < conf.EXPLORATION_TIME:
             # temperature tau = 1
             s = sum(root.n)
-            pi = np.array([x / s for x in root.n], dtype=np.float32)
+            pi = [x / s for x in root.n]
         else:
             # temperature tau -> 0
             m = max(root.n)
             p = [0 if x < m else 1 for x in root.n]
             s = sum(p)
-            pi = np.array([x / s for x in p], dtype=np.float32)
+            pi = [x / s for x in p]
 
         # save position, distribution of action selection and turn
         examples.append([
             extract_features(root, conf),
-            pi,
+            np.array(pi, dtype=np.float32),
             np.array([root.go.turn], dtype=np.float32)])
 
         # choose an action
@@ -61,8 +81,14 @@ def self_play(network, device, conf):
             break
         previous_action = action
 
-    score_black, score_white = root.go.score()
-    result = 1.0 if score_black > score_white else -1.0
+    # calculate the scores if the result is undecided
+    if result == 0.0:
+        score_black, score_white = root.go.score()
+        result = 1.0 if score_black > score_white else -1.0
+
+    # add the history into resignation manager to update the threshold
+    if not resign_enabled:
+        resign_mgr.add(history, result)
 
     # update the the game winner from the perspective of each player
     for i in range(len(examples)):

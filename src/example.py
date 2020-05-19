@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from play import self_play
+from resign import ResignManager
 
 
 class ExamplePool:
@@ -25,9 +26,13 @@ class ExamplePool:
         # records the current position when traversing the examples
         self.position = 0
 
+        # resignation manager
+        self.resign_mgr = ResignManager(conf)
+
     def generate_examples(self, network, device):
         for i in range(self.conf.GAMES_PER_ITERATION):
-            new_examples = self_play(network, device, self.conf)
+            new_examples = self_play(network, device, self.conf,
+                                     self.resign_mgr)
             self.examples += new_examples
             self.lengths.append(len(new_examples))
             log.info('{} new examples generated'.format(len(new_examples)))
