@@ -4,6 +4,7 @@ import glog as log
 import numpy as np
 import torch
 
+from evaluate import DefaultEvaluator
 from play import self_play
 from resign import ResignManager
 
@@ -30,9 +31,9 @@ class ExamplePool:
         self.resign_mgr = ResignManager(conf)
 
     def generate_examples(self, network, device):
+        evaluator = DefaultEvaluator(network, device)
         for i in range(self.conf.GAMES_PER_ITERATION):
-            new_examples = self_play(network, device, self.conf,
-                                     self.resign_mgr)
+            new_examples = self_play(evaluator, self.conf, self.resign_mgr)
             self.examples += new_examples
             self.lengths.append(len(new_examples))
             log.info('{} new examples generated'.format(len(new_examples)))

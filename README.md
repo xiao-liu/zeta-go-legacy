@@ -163,6 +163,9 @@ It only contains a dozen of files and most of them are only ~100 lines.
 Therefore I choose a flat file structure and put all the files directly under
 the `src` directory. Following is an introduction to each file:
 
+`compare.py`
+> The code that compares the performance of two neural networks.
+
 `config.py`
 > The collection of configurations.
 > A configuration contains all the information that defines the problem and all
@@ -174,7 +177,7 @@ the `src` directory. Following is an introduction to each file:
 > You can also use their build-in counterparts if you like.
 
 `evaluate.py`
-> The code that compares the performance of two neural networks.
+> [Working in progress]
 
 `example.py`
 > The class that generates and manages self-play examples.
@@ -208,6 +211,9 @@ the `src` directory. Following is an introduction to each file:
 `predict.py`
 > The code that calculates the prediction of a neural network for a given input,
 > applying a random Dihedral transformation if necessary.
+
+`resign.py`
+> [Working in progress]
 
 `train.py`
 > The code to train a new model/resume training from a previous checkpoint.

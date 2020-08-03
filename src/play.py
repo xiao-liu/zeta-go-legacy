@@ -3,14 +3,15 @@
 import numpy as np
 import torch
 
-from feature import extract_features
+from evaluate import DefaultEvaluator
 from go import BLACK, WHITE
 from gui import GUI
 from mcts import TreeNode, tree_search
 from network import ZetaGoNetwork
+from predict import extract_features
 
 
-def self_play(network, device, conf, resign_mgr):
+def self_play(evaluator, conf, resign_mgr):
     examples = []
 
     resign_enabled = resign_mgr.enabled()
@@ -23,14 +24,14 @@ def self_play(network, device, conf, resign_mgr):
     result = 0.0
 
     # create a search tree
-    root = TreeNode(None, None, network, device, conf)
+    root = TreeNode(None, None, evaluator, conf)
 
     previous_action = None
     t = 0
     while t < conf.MAX_GAME_LENGTH:
         # perform MCTS
         for i in range(conf.NUM_SIMULATIONS):
-            tree_search(root, network, device, conf)
+            tree_search(root, evaluator, conf)
 
         # we follow AlphaGo's method to calculate the resignation value
         # notice that children with n = 0 are skipped by setting their
@@ -102,16 +103,20 @@ def mutual_play(network_black, network_white, device, conf):
     root_black = TreeNode(None, None, network_black, device, conf)
     root_white = TreeNode(None, None, network_white, device, conf)
 
+    # create evaluators for both players
+    evaluator_black = DefaultEvaluator(network_black, device)
+    evaluator_white = DefaultEvaluator(network_white, device)
+
     # black player goes first
     root = root_black
-    network = network_black
+    evaluator = evaluator_black
 
     previous_action = None
     t = 0
     while t < conf.MAX_GAME_LENGTH:
         # both players perform MCTS, each one uses its own network
         for i in range(conf.NUM_SIMULATIONS):
-            tree_search(root, network, device, conf)
+            tree_search(root, evaluator, conf)
 
         # calculate the distribution of action selection
         # temperature tau -> 0
@@ -126,11 +131,11 @@ def mutual_play(network_black, network_white, device, conf):
         # take the action
         if root_black.children[action] is None:
             root_black.children[action] = \
-                TreeNode(root_black, action, network_black, device, conf)
+                TreeNode(root_black, action, evaluator_black, conf)
         root_black = root_black.children[action]
         if root_white.children[action] is None:
             root_white.children[action] = \
-                TreeNode(root_white, action, network_white, device, conf)
+                TreeNode(root_white, action, evaluator_white, conf)
         root_white = root_white.children[action]
 
         # release memory
@@ -138,8 +143,12 @@ def mutual_play(network_black, network_white, device, conf):
         root_white.parent.children = None
 
         # switch to the other search tree
-        root = root_white if root.go.turn == BLACK else root_black
-        network = network_white if root.go.turn == BLACK else network_black
+        if root.go.turn == BLACK:
+            root = root_white
+            evaluator = evaluator_white
+        else:
+            root = root_black
+            evaluator = evaluator_black
 
         t += 1
 
@@ -166,8 +175,11 @@ def play_against_human(model_file, black_player):
     network.load_state_dict(model['network'])
     network.to(device)
 
+    # create a evaluator
+    evaluator = DefaultEvaluator(network, device)
+
     # create a search tree
-    root = TreeNode(None, None, network, device, conf)
+    root = TreeNode(None, None, evaluator, conf)
 
     gui = GUI(conf)
 
@@ -183,7 +195,7 @@ def play_against_human(model_file, black_player):
 
             # perform MCTS
             for i in range(conf.NUM_SIMULATIONS):
-                tree_search(root, network, device, conf)
+                tree_search(root, evaluator, conf)
 
             # calculate the distribution of action selection
             # temperature tau -> 0
@@ -198,7 +210,7 @@ def play_against_human(model_file, black_player):
         # take the action
         if root.children[action] is None:
             root.children[action] = \
-                TreeNode(root, action, network, device, conf)
+                TreeNode(root, action, evaluator, conf)
         root = root.children[action]
 
         # release memory

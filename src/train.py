@@ -5,7 +5,7 @@ import torch
 import torch.optim as optim
 
 from config import get_conf
-from evaluate import estimate_win_rate
+from compare import estimate_win_rate
 from example import ExamplePool
 from network import ZetaGoNetwork
 
